@@ -38,6 +38,10 @@ app.post('/user', async (req, res) => {
   const { FirstName, LastName, Email, apiKey } = req.body
   if (!FirstName || !LastName || !Email || !apiKey) return res.status(400).json({ success:false, message: 'Field wajib diisi' })
   try {
+    // cek apakah email sudah terdaftar dulu agar tidak membuat API sia-sia
+    const [exists] = await connection.execute('SELECT 1 FROM User WHERE Email = ? LIMIT 1', [Email])
+    if (exists.length > 0) return res.status(409).json({ success:false, message: 'Email sudah terdaftar' })
+
     // insert API
     const [r] = await connection.execute('INSERT INTO API (ApiKey) VALUES (?)', [apiKey])
     const keyId = r.insertId
@@ -46,6 +50,9 @@ app.post('/user', async (req, res) => {
     res.json({ success: true })
   } catch (err) {
     console.error(err)
+    if (err && err.code === 'ER_DUP_ENTRY') {
+      return res.status(409).json({ success:false, message:'Email sudah terdaftar' })
+    }
     res.status(500).json({ success:false, message:'Gagal menyimpan ke database' })
   }
 })
@@ -72,11 +79,18 @@ app.post('/admin/register', async (req, res) => {
   const { Email, Password } = req.body
   if (!Email || !Password) return res.status(400).json({ success:false, message:'Email & Password required' })
   try {
+    // cek apakah email sudah terdaftar
+    const [exists] = await connection.execute('SELECT 1 FROM Admin WHERE Email = ? LIMIT 1', [Email])
+    if (exists.length > 0) return res.status(409).json({ success:false, message:'Email sudah terdaftar' })
+
     const pwdHash = hashPassword(Password)
     await connection.execute('INSERT INTO Admin (Email, Password) VALUES (?, ?)', [Email, pwdHash])
     res.json({ success:true })
   } catch (err) {
     console.error(err)
+    if (err && err.code === 'ER_DUP_ENTRY') {
+      return res.status(409).json({ success:false, message:'Email sudah terdaftar' })
+    }
     res.status(500).json({ success:false, message:'Gagal register' })
   }
 })
