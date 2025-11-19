@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Register User — API Key</title>
+  <style>
+    :root{--bg:#f6f9fc;--card:#ffffff;--accent:#2B80FF;--muted:#6B7A90;--success:#0BB57A}
+    *{box-sizing:border-box;font-family:Inter,system-ui,-apple-system,Segoe UI,Roboto,"Helvetica Neue",Arial}
+    body{margin:0;background:linear-gradient(180deg,var(--bg),#eaf3ff);min-height:100vh;display:flex;align-items:center;justify-content:center;padding:24px;color:#1f2d3d}
+    .card{background:var(--card);width:100%;max-width:760px;border-radius:12px;box-shadow:0 8px 30px rgba(43,128,255,0.08);padding:28px;display:block}
+    .left{width:100%}
+    h1{margin:0 0 10px;font-size:20px;color:#0f1724}
+    p.lead{margin:0 0 18px;color:var(--muted);font-size:14px}
+    label{display:block;font-size:12px;color:var(--muted);margin-bottom:6px}
+    input,textarea{width:100%;padding:10px 12px;border:1px solid #e6eef9;border-radius:8px;background:#fff;font-size:14px;color:#0f1724}
+    textarea{min-height:88px;resize:none}
+    .row{display:flex;gap:12px}
+    .btn{display:inline-flex;align-items:center;gap:8px;padding:10px 14px;border-radius:8px;border:none;cursor:pointer;font-weight:600}
+    .btn.primary{background:var(--accent);color:#fff;box-shadow:0 6px 18px rgba(43,128,255,0.12)}
+    .btn.ghost{background:transparent;border:1px solid #d8e6ff;color:var(--accent)}
+    .msg{font-size:13px;color:var(--success);margin-top:10px;display:none}
+    .hint{font-size:12px;color:var(--muted);margin-top:8px}
+    .link{color:var(--accent);text-decoration:none;font-weight:600}
+    @media(max-width:740px){.card{padding:20px}}
+  </style>
+</head>
+<body>
+  <div class="card" role="main">
+    <div class="left">
+      <h1>Daftarkan User & API Key</h1>
+      <p class="lead">Isi data user lalu generate API key. API tersimpan ke database hanya setelah Anda menekan "Simpan User".</p>
+
+      <label for="firstName">Nama Depan</label>
+      <input id="firstName" placeholder="Contoh: Agus" />
+
+      <label for="lastName">Nama Belakang</label>
+      <input id="lastName" placeholder="Contoh: Santoso" />
+
+      <label for="email">Email</label>
+      <input id="email" placeholder="user@contoh.com" />
+
+      <label for="apiKey">API Key (readonly)</label>
+      <textarea id="apiKey" readonly placeholder="Klik Generate untuk membuat API key"></textarea>
+
+      <div style="display:flex;gap:10px;margin-top:12px">
+        <button class="btn ghost" onclick="generateKey()">Generate API</button>
+        <button class="btn primary" onclick="saveUser()">Simpan User</button>
+      </div>
+
+      <div id="msg" class="msg" role="status"></div>
+
+      <p class="hint">Admin? <a class="link" href="/admin">Masuk ke admin</a></p>
+    </div>
+  </div>
+
+  <script>
+    async function generateKey(){
+      try {
+        const res = await fetch('/generate',{method:'POST'})
+        const data = await res.json()
+        if(data.success){ document.getElementById('apiKey').value = data.apiKey; showMsg('API key berhasil dibuat') }
+        else showMsg('Gagal generate API key')
+      } catch(e){ showMsg('Kesalahan koneksi') }
+    }
+
+    async function saveUser(){
+      const FirstName = document.getElementById('firstName').value.trim()
+      const LastName = document.getElementById('lastName').value.trim()
+      const Email = document.getElementById('email').value.trim()
+      const apiKey = document.getElementById('apiKey').value.trim()
+      if(!FirstName || !LastName || !Email || !apiKey) return showMsg('Lengkapi semua field dan generate API terlebih dahulu.')
+
+      try {
+        const res = await fetch('/user',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({FirstName,LastName,Email,apiKey})})
+        const data = await res.json()
+        if(data.success){
+          showMsg('User dan API berhasil disimpan.')
+          document.getElementById('firstName').value = ''
+          document.getElementById('lastName').value = ''
+          document.getElementById('email').value = ''
+          document.getElementById('apiKey').value = ''
+        } else showMsg(data.message || 'Gagal menyimpan.')
+      } catch(e){ showMsg('Kesalahan koneksi saat menyimpan.') }
+    }
+
+    function showMsg(t){ const el=document.getElementById('msg'); el.innerText=t; el.style.display='block'; setTimeout(()=>el.style.display='none',3000) }
+  </script>
+</body>
+</html>
